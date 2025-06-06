@@ -41,7 +41,15 @@ dependencies:
   timeago: ^3.6.0
   cached_network_image: ^3.3.1
   path_provider: ^2.1.1
-  
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  firebase_storage: ^11.5.6
+  firebase_analytics: ^10.7.4
+  connectivity_plus: ^5.0.2
+  image_picker: ^1.0.5
+  uuid: ^4.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,35 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import '../services/firebase_service.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final Function(String) onLogin;
-
-  const RegisterScreen({Key? key, required this.onLogin}) : super(key: key);
+  const RegisterScreen({Key? key}) : super(key: key);
 
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController();
+  bool _isLoading = false;
 
   Future<void> _register() async {
-    if (_formKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
-      final users = prefs.getStringList('users') ?? [];
-      final newUser = {
-        'username': _usernameController.text,
-        'password': _passwordController.text,
-        'email': _emailController.text,
-      };
-      users.add(newUser.toString());
-      await prefs.setStringList('users', users);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng ký thành công!')));
-      widget.onLogin(_usernameController.text);
+    if (_emailController.text.isEmpty ||
+        _passwordController.text.isEmpty ||
+        _usernameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final firebaseService = Provider.of<FirebaseService>(context, listen: false);
+      await firebaseService.signUp(
+        _emailController.text,
+        _passwordController.text,
+        _usernameController.text,
+      );
+      if (mounted) {
       Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đăng ký thành công')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -41,54 +62,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
           child: Column(
             children: [
-              TextFormField(
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email'),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            TextField(
                 controller: _usernameController,
-                decoration: const InputDecoration(labelText: 'Tên đăng nhập'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập tên đăng nhập';
-                  }
-                  return null;
-                },
+              decoration: const InputDecoration(labelText: 'Tên người dùng'),
               ),
-              TextFormField(
+            TextField(
                 controller: _passwordController,
                 decoration: const InputDecoration(labelText: 'Mật khẩu'),
                 obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Email không hợp lệ';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
+            _isLoading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
                 onPressed: _register,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 48),
                 ),
-                child: Text('Đăng ký'),
+                    child: const Text('Đăng ký'),
               ),
             ],
-          ),
         ),
       ),
     );
@@ -96,9 +96,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 } 

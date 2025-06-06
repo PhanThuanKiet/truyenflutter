@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/truyen.dart';
 import 'truyen_chitiet_screen.dart';
 import '../widgets/truyen_card.dart';
 import '../models/theloai.dart';
 import '../services/api_service.dart';
+import '../services/firebase_service.dart';
 import 'tim_kiem_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
@@ -11,14 +13,14 @@ import 'profile_screen.dart';
 import '../main.dart';
 
 class YeuThichStorage {
-  static Future<void> saveYeuThich(String username, List<String> slugs) async {
+  static Future<void> saveYeuThich(String userId, List<String> slugs) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('yeuthich_$username', slugs);
+    await prefs.setStringList('yeuthich_$userId', slugs);
   }
 
-  static Future<List<String>> loadYeuThich(String username) async {
+  static Future<List<String>> loadYeuThich(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getStringList('yeuthich_$username') ?? [];
+    return prefs.getStringList('yeuthich_$userId') ?? [];
   }
 }
 
@@ -38,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasMore = true;
   final ScrollController _scrollController = ScrollController();
   List<String> _yeuThichSlugs = [];
-  String _currentUser = 'guest';
+  String _currentUserId = 'guest';
 
   @override
   void initState() {
@@ -116,14 +118,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadYeuThich() async {
-    final slugs = await YeuThichStorage.loadYeuThich(_currentUser);
+    final slugs = await YeuThichStorage.loadYeuThich(_currentUserId);
     setState(() {
       _yeuThichSlugs = slugs;
     });
   }
 
   Future<void> _saveYeuThich() async {
-    await YeuThichStorage.saveYeuThich(_currentUser, _yeuThichSlugs);
+    await YeuThichStorage.saveYeuThich(_currentUserId, _yeuThichSlugs);
   }
 
   void _toggleYeuThich(Truyen truyen) async {
@@ -226,28 +228,25 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => LoginScreen(
-          onLogin: (email) async {
-            setState(() {
-              _currentUser = email;
-            });
-            await _loadYeuThich();
-          },
-        ),
+        builder: (_) => const LoginScreen(),
       ),
     );
   }
 
-  void _logout() async {
-    setState(() {
-      _currentUser = 'guest';
-    });
-    await _loadYeuThich();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã đăng xuất!')));
-  }
-
   @override
   Widget build(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(context);
+    final user = firebaseService.user;
+
+    // Update current user ID when auth state changes
+    if (user != null && _currentUserId != user.uid) {
+      _currentUserId = user.uid;
+      _loadYeuThich();
+    } else if (user == null && _currentUserId != 'guest') {
+      _currentUserId = 'guest';
+      _loadYeuThich();
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("📚 Truyện Online"),
@@ -376,21 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ProfileScreen(
-                  onLogout: () async {
-                    setState(() {
-                      _currentUser = 'guest';
-                    });
-                    await _loadYeuThich();
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã đăng xuất!')));
-                  },
-                  onLogin: (email) async {
-                    setState(() {
-                      _currentUser = email;
-                    });
-                    await _loadYeuThich();
-                  },
-                ),
+                builder: (_) => const ProfileScreen(),
               ),
             );
           }

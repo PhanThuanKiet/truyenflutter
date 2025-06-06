@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/home_screen.dart';
 import 'services/auth_service.dart';
+import 'services/firebase_service.dart';
 import 'providers/theme_provider.dart';
 import 'dart:io';
 import 'dart:convert';
@@ -9,7 +11,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/doc_truyen_offline_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  print('Before Firebase init');
+  await Firebase.initializeApp();
+  print('After Firebase init');
   runApp(const MyApp());
 }
 
@@ -20,8 +26,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthService(),
+          // Đảm bảo AuthService được khởi tạo ngay
+          lazy: false,
+        ),
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => FirebaseService()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -97,19 +109,19 @@ class _DownloadedTruyenScreenState extends State<DownloadedTruyenScreen> {
     final downloaded = prefs.getStringList('downloaded_truyens') ?? [];
     final dir = await getApplicationDocumentsDirectory();
     List<Map<String, dynamic>> truyens = [];
-    
+
     for (final slug in downloaded) {
       final file = File('${dir.path}/$slug.json');
       if (await file.exists()) {
         final content = await file.readAsString();
         final truyenData = jsonDecode(content);
-        
+
         // Load downloaded chapters
         final storyDir = Directory('${dir.path}/$slug');
         if (await storyDir.exists()) {
           final chapters = await storyDir.list().toList();
           final downloadedChapters = <Map<String, dynamic>>[];
-          
+
           for (var chapter in chapters) {
             if (chapter is Directory) {
               final chapterId = chapter.path.split('/').last;
@@ -125,14 +137,14 @@ class _DownloadedTruyenScreenState extends State<DownloadedTruyenScreen> {
               }
             }
           }
-          
+
           truyenData['downloaded_chapters'] = downloadedChapters;
         }
-        
+
         truyens.add(truyenData);
       }
     }
-    
+
     setState(() {
       _truyens = truyens;
       _loading = false;
@@ -146,7 +158,7 @@ class _DownloadedTruyenScreenState extends State<DownloadedTruyenScreen> {
       if (await storyDir.exists()) {
         await storyDir.delete(recursive: true);
       }
-      
+
       final file = File('${dir.path}/$slug.json');
       if (await file.exists()) {
         await file.delete();
@@ -158,7 +170,7 @@ class _DownloadedTruyenScreenState extends State<DownloadedTruyenScreen> {
       await prefs.setStringList('downloaded_truyens', downloaded);
 
       await _loadDownloadedTruyens();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đã xóa truyện!')),
@@ -186,7 +198,7 @@ class _DownloadedTruyenScreenState extends State<DownloadedTruyenScreen> {
                   itemBuilder: (context, index) {
                     final truyen = _truyens[index];
                     final downloadedChapters = truyen['downloaded_chapters'] as List<dynamic>? ?? [];
-                    
+
                     return Card(
                       margin: const EdgeInsets.all(8),
                       child: Column(

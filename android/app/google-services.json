@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1034486544111",
+    "project_id": "comicuser-48cdf",
+    "storage_bucket": "comicuser-48cdf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1034486544111:android:f5379ea71691c536184d1a",
+        "android_client_info": {
+          "package_name": "com.example.truyenflutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGmIqnTDgWDGmw9acqdDGDSqAI67UJlr0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

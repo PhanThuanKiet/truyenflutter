@@ -1,25 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_service.dart';
 import '../providers/theme_provider.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final Function() onLogout;
-  final Function(String) onLogin;
-
-  const ProfileScreen({
-    super.key,
-    required this.onLogout,
-    required this.onLogin,
-  });
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
+    final firebaseService = Provider.of<FirebaseService>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isLoggedIn = authService.isLoggedIn;
-    final username = authService.username;
+    final isLoggedIn = firebaseService.isLoggedIn;
+    final user = firebaseService.user;
 
     return Scaffold(
       appBar: AppBar(
@@ -51,7 +44,7 @@ class ProfileScreen extends StatelessWidget {
                             backgroundColor: Theme.of(context).primaryColor,
                             radius: 30,
                             child: Text(
-                              username != null && username.isNotEmpty ? username[0].toUpperCase() : '',
+                              user?.email?[0].toUpperCase() ?? '',
                               style: const TextStyle(
                                 fontSize: 24,
                                 color: Colors.white,
@@ -64,7 +57,7 @@ class ProfileScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  username ?? '',
+                                  user?.email ?? '',
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -84,8 +77,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
-                  await authService.logout();
-                  onLogout();
+                  await firebaseService.signOut();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
@@ -110,12 +102,7 @@ class ProfileScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => LoginScreen(
-                        onLogin: (username) async {
-                          await authService.login(username);
-                          onLogin(username);
-                        },
-                      ),
+                      builder: (_) => const LoginScreen(),
                     ),
                   );
                 },
